@@ -40,6 +40,9 @@ let getSearchDB = () => {
                             return item;
                         }));
                 getSearchDB();
+            } else {
+                $tables.unshift($table);
+                $("#retryContainer").show();
             }
         })
         .fail((response) => {
@@ -72,23 +75,49 @@ let getSearchDB = () => {
     }
 };
 
+chrome.tabs.query({'active': true}, function(tabs) {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (sender.id == chrome.runtime.id && message.tab == tabs[0].id) {
+            switch (message.action) {
+                case "update":
+                    $("#content").html(message.message);
+                    break;
+            }
+        }
+    });
+});
+
+
 $(function() {
+    let $content = $('#content');
     chrome.tabs.query({'active': true}, function(tabs) {
         chrome.tabs.sendMessage(tabs[0].id, {"testDBSearch": true}, function(response) {
-            // console.log("Getting Here.");
-            // console.log(response);
+            console.log("Getting Here.");
+            console.log(response);
             if (response) {
                 $('#runSearch').prop('disabled', false);
             } else {
                 $('#runSearch').prop('disabled', true);
             }
         });
+        chrome.runtime.sendMessage({"action": "update", "id": tabs[0].id}, (response) => {
+            if (response.success) {
+                $("#content").html(response.message);
+            }
+        });
     });
-    $("#tryAgain").click(function() {
+    $content.on('click', '#resetButton', () => {
+        chrome.tabs.query({'active': true}, function(tabs) {
+            chrome.runtime.sendMessage({"action": "reset", "id": tabs[0].id}, () => {
+                window.close();
+            });
+        });
+    });
+    $content.on('click', "#tryAgain", function() {
         $("#retryContainer").hide();
         getSearchDB();
     });
-    $('#runSearch').click(function() {
+    $content.on('click', '#runSearch', function() {
         chrome.tabs.query({'active': true}, function(tabs) {
             chrome.tabs.sendMessage(tabs[0].id, {"runDBSearch": true}, function(response) {
                 $tables = response.data.criteriaTables;
@@ -97,16 +126,27 @@ $(function() {
                 $data = getAJAXCode(response.data);
                 $data += "&ajax_request=true&criteriaTables[]=";
                 $url = response.url;
-                $("#runSearchContainer").hide();
-                $("#tableContainer").show();
-                $("#progressBarContainer .progress-bar").attr('aria-valuemax', $tablesCount);
-                $("#progressBarContainer").show();
-                getSearchDB();
+                if ($tablesCount > 0) {
+                    chrome.runtime.sendMessage({"action": "start", "tables": $tables, "tables-count": $tablesCount, "data": $data, "url": $url, "odd": true, "total": 0, "tab": tabs[0].id}, () => {
+                        $("#runSearchContainer").hide();
+                        $("#tableContainer").show();
+                        $("#progressBarContainer .progress-bar").attr('aria-valuemax', $tablesCount);
+                        $("#progressBarContainer").show();
+                    });
+                } else {
+                    $content.find("#runSearchContainer").prepend($('<div class="alert alert-warning alert-dismissible" role="alert">\n' +
+                        '  <strong>Hold on!</strong> You need to select at least one table.\n' +
+                        '  <button type="button" class="close" data-dismiss="alert" aria-label="Close">\n' +
+                        '    <span aria-hidden="true">&times;</span>\n' +
+                        '  </button>\n' +
+                        '</div>'));
+                }
+                // getSearchDB();
                 // console.log(response);
             });
         });
     });
-    $('#search_results').on('click', 'a', function(event) {event.preventDefault();});
+    $('#content').on('click', '#search_results a', function(event) {event.preventDefault();});
 });
 
 // console.log("popup.js Loaded");
