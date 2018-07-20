@@ -2,7 +2,6 @@ let $form = false;
 
 function testForm() {
     $form = document.getElementById('db_search_form');
-    // console.log($form);
     return !!($form);
 }
 
@@ -39,6 +38,7 @@ function getForm() {
             "data": $data
         };
     }
+    return {"error": "No form"};
 }
 
 chrome.runtime.onMessage.addListener(
@@ -60,7 +60,6 @@ chrome.runtime.onMessage.addListener(
             // now it's time to show the div containing the link
                 .style.display = "block";
             document.getElementById('searchresults').style.display = "block";
-
 
             document.getElementById('db_search_form')
             // workaround for Chrome problem (bug #3168569)
