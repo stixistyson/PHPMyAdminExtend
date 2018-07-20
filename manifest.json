@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+  "name": "PHPMyAdmin Extension",
+  "description": "Database searching broken down to single table searches.",
+  "version": "0.9",
+  "browser_action": {
+    "default_name": "PHPMyAdmin Extension",
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*/phpmyadmin/*"],
+      "js": ["js/content.js"]
+    }
+  ],
+  "permissions": [
+    "activeTab"
+  ]
+}
